@@ -354,12 +354,12 @@ Stations<-read_csv("http://www.macalester.edu/~dshuman1/data/112/DC-Stations.csv
   
 ```{r}
 trip_station <- Trips %>% 
-    left_join(Stations, by=c("sstation"="name")) %>% 
-  group_by(sstation, lat, long) %>% 
-count(sstation)
+    left_join(Stations, by=c("sstation"="name")) %>%
+group_by(sstation) %>% 
+  distinct(sstation, departures=n(), lat, long, client) 
   
 color_pallete <- colorNumeric("viridis", 
-                  domain=trip_station$n)
+                  domain=trip_station$departures)
   
 leaflet(data = trip_station) %>% 
   addProviderTiles(providers$Stamen.Terrain) %>% 
@@ -368,9 +368,9 @@ leaflet(data = trip_station) %>%
              label = ~sstation, 
              weight = 10, 
              opacity = 1,
-             color= ~color_pallete(n)) %>%
+             color= ~color_pallete(departures)) %>%
 addLegend(pal=color_pallete,
-          values= ~n,
+          values= ~departures,
           opacity= .5,
           title="Total number of departures per station",
           position="bottomright")
@@ -381,10 +381,10 @@ addLegend(pal=color_pallete,
   
 ```{r}
 trip_station_percentage <- trip_station %>% 
-  group_by(sstation, long, lat) %>% 
+  filter(client == "Casual") 
  
 color_pallete <- colorNumeric("viridis",
-                          domain=trip_station_percentage$percent_casual)
+                          domain=trip_station_percentage$departures)
   
 leaflet(data = trip_station_percentage) %>% 
   addProviderTiles(providers$Stamen.Terrain) %>% 
@@ -393,9 +393,9 @@ leaflet(data = trip_station_percentage) %>%
              label = ~sstation, 
              weight = 10, 
              opacity = 1,
-             color= ~color_pallete(percent_casual)) %>%
+             color= ~color_pallete(departures)) %>%
 addLegend(pal=color_pallete,
-          values= ~percent_casual,
+          values= ~departures,
           opacity= .5,
           title="Areas with a higher percentage of casual riders",
           position="bottomright")
@@ -503,9 +503,50 @@ addLegend(pal=palette1,
 mpls_nbhd <- st_read("Minneapolis_Neighborhoods/Minneapolis_Neighborhoods.shp", quiet = TRUE)
 ```
 
+```{r}
+mpls_all2 <- mpls_nbhd %>%
+  left_join(MplsDemo,
+            by = c("BDNAME" = "neighborhood"))
+mpls_all <- mpls_all2 %>%
+  left_join(mpls_suspicious,
+            by = c("BDNAME" = "neighborhood"))
+```
+
+
   17. Use `leaflet` to create a map from the `mpls_all` data  that colors the neighborhoods by `prop_suspicious`. Display the neighborhood name as you scroll over it. Describe what you observe in the map.
   
+```{r}
+palette <- colorFactor(c("viridis"), domain = (mpls_all$prop_suspicious))
+
+mpls_all %>%
+  select(BDNAME, geometry, prop_suspicious)
+leaflet(data = mpls_all) %>%
+addPolygons(fillColor = ~palette(prop_suspicious),
+              fillOpacity = .5,
+              label = ~BDNAME) %>% 
+addTiles()  
+```
+  
+  
   18. Use `leaflet` to create a map of your own choosing. Come up with a question you want to try to answer and use the map to help answer that question. Describe what your map shows. 
+  
+```{r}
+palette <- colorFactor(c("viridis"), domain = (mpls_all$poverty))
+
+leaflet(data = mpls_all) %>% 
+  addProviderTiles(providers$Stamen.Terrain) %>% 
+ addPolygons(fillColor = ~palette(poverty),
+              fillOpacity = .5,
+              label = ~BDNAME) %>%
+  addTiles() %>% 
+addLegend(pal=palette,
+            values = ~poverty, 
+            opacity = 0.7, 
+            title="Poverty values",
+            position = "bottomright") 
+```
+```
+  
   
   
 ## GitHub link
